@@ -5,7 +5,8 @@ import time
 import threading
 import IMU
 import zlib, base64
-from firebase import firebase
+import firebase_admin
+from firebase_admin import credentials,firestore
 from picamera import PiCamera
 import urllib2, urllib, httplib
 from threading import Thread, Event
@@ -17,12 +18,14 @@ stop_event = Event()
  
  
 #when internet is not connected it will retry sending data
-def do_actions(dic,dt):
+def do_actions(dic,dt,localtime):
         retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError)
         time_out=3
         while True:
                 try:
-                        firebase.post(dic,dt)
+                        # firebase.post(dic,dt)
+                        doc_ref = db.collection(u'sensor_data').document(dic)
+                        doc_ref.update({unicode(localtime,'utf-8') :unicode(dt,'utf-8')})
                 except retry_on:
                         time.sleep(time_out)
                         continue
@@ -72,7 +75,7 @@ def writeLog(string,f):
                    if lines!='':
                            for x in lines:
                                    if flag==0:
-                                       action_thread = Thread(target=do_actions,args=('\LOG',x,))
+                                       action_thread = Thread(target=do_actions,args=(u'LOG',x,localtime))
                                        action_thread.start()
                                        flag=1
                                    else:
@@ -80,7 +83,7 @@ def writeLog(string,f):
                                        z=a[0]
                                        u=open(z,"r+")
                                        v=u.readlines()
-                                       action_thread = Thread(target=do_actions,args=('\AccFile',v,))
+                                       action_thread = Thread(target=do_actions,args=(u'AccFile',v,localtime))
                                        action_thread.start()
                                        flag=0
                                        u.close()        
@@ -88,10 +91,10 @@ def writeLog(string,f):
            
            t=open(string,"r+")
            s=t.readlines() 
-           action_thread = Thread(target=do_actions,args=('\AccFile',s,))
+           action_thread = Thread(target=do_actions,args=(u'AccFile',s,localtime))
            action_thread.start()
            t.close()
-           action_thread = Thread(target=do_actions,args=('\LOG',data,))
+           action_thread = Thread(target=do_actions,args=(u'LOG',data,localtime))
            action_thread.start()
           
       else:
@@ -109,8 +112,15 @@ gpsd = None
 
 f=open("/home/pi/Documents/LOG/LOG.txt","a+")
 #Your database name in firebase
-firebase=firebase.FirebaseApplication('https://<YOUR_DATABASE_NAME>.firebaseio.com/', None)
+# firebase=firebase.FirebaseApplication('https://<YOUR_DATABASE_NAME>.firebaseio.com/', None)
+cred = credentials.Certificate("serviceAccountKey.json")
+firebase_admin.initialize_app(cred)
 
+db = firestore.client()
+log_ref = db.collection(u'sensor_data').document(u'LOG')
+acc_file_ref = db.collection(u'sensor_data').document(u'AccFile')
+log_ref.set({u'0' : u"Collected Data below"})
+acc_file_ref.set({u'0' : u"Collected Data below"})
 os.system('clear')
  
 class GpsPoller(threading.Thread):
