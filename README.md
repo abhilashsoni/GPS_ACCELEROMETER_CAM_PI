@@ -70,14 +70,17 @@ Step 6: Downloading all the required libraries:
 				$ sudo apt-get install python-pip
 				$ sudo pip3 install pybase64
 			
-			For firebase:
-				$ sudo pip install requests==2.12.4
-				$ sudo pip install python-firebase
+			#For firebase:
+			#	$ sudo pip install requests==2.12.4
+			#	$ sudo pip install python-firebase
+			For firebase-admin:
+				$ sudo pip install requests
+				$ sudo pip install firebase-admin
 			
 
 Step 7: Download the source code:
 
-			Open Terminal $ git clone https://github.com/Ankita46/GPS_ACCELEROMETER_CAM_PI.git
+			Open Terminal $ git clone https://github.com/ashwanikr17/GPS_ACCELEROMETER_CAM_PI.git
 			
 
 Step 8: Open GPS_ACCELEROMETER_CAM_PI from File Manager. Move the LOG folder to Documents
