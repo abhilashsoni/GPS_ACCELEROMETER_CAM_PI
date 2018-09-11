@@ -76,6 +76,7 @@ Step 6: Downloading all the required libraries:
 			For firebase-admin:
 				$ sudo pip install requests
 				$ sudo pip install firebase-admin
+				$ sudo pip install --upgrade google-auth-oauthlib
 			
 
 Step 7: Download the source code:
