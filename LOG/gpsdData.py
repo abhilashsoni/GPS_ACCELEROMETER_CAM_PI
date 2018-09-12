@@ -28,6 +28,7 @@ def do_actions(dic,dt,localtime):
                         if type(dt) is list:
                         	dt = '\n'.join(dt)
                         doc_ref.update({unicode(localtime,'utf-8') :unicode(dt,'utf-8')})
+                        print("Update to firebase at {}".format(localtime))
                 except retry_on:
                         time.sleep(time_out)
                         continue
