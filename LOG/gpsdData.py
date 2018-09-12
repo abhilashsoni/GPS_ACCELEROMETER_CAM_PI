@@ -25,6 +25,8 @@ def do_actions(dic,dt,localtime):
                 try:
                         # firebase.post(dic,dt)
                         doc_ref = db.collection(u'sensor_data').document(dic)
+                        if type(dt) is list:
+                        	dt = '\n'.join(dt)
                         doc_ref.update({unicode(localtime,'utf-8') :unicode(dt,'utf-8')})
                 except retry_on:
                         time.sleep(time_out)
