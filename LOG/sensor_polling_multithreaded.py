@@ -17,7 +17,7 @@ import pigpio
 import serial
 rx=26
 
-address_prefix ='/home/pi/Documents/LOG/'
+address_prefix =''          #'/home/pi/Documents/LOG/'
 
 
 
