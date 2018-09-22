@@ -5,9 +5,10 @@ import time
 # import threading
 import IMU
 import zlib, base64
-from firebase import firebase
+import firebase_admin
+from firebase_admin import credentials,firestore
 from picamera import PiCamera
-import urllib.request, urllib.parse, urllib.error, http.client
+import urllib
 from threading import Thread, Event
 import requests
 import errno
@@ -58,9 +59,9 @@ def do_actions(dic,dt):
 
 #checks it internet connection is available
 def internet_on():
-	exc = (urllib.error.URLError, urllib.error.HTTPError)
+	exc = (urllib.URLError, urllib.HTTPError)
 	try:
-		urllib.request.urlopen('http://216.58.192.142',timeout=3)
+		urllib.urlopen('http://216.58.192.142',timeout=3)
 		return True
 	except exc:			
                 return False
@@ -88,8 +89,8 @@ def accel():
         x=((ACCx*0.244)/100)
         y=((ACCy*0.244)/100)
         z=((ACCz*0.244)/100)
-        print(("X = %f\t"%x), end=' ')
-        print(("Y = %f\t"%y), end=' ')
+        print(("X = %f\t"%x),)
+        print(("Y = %f\t"%y),c)
         print(("Z = %f\t"%z))    
         #ts=time.asctime(time.localtime(time.time()))
         coordinates = "X = %f\tY = %f\tZ=%f"%(x,y,z)
