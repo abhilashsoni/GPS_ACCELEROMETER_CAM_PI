@@ -15,7 +15,7 @@ import errno
 from socket import error as SocketError
  
 stop_event = Event()
- 
+address_prefix = "/home/pi/Documents/LOG/"
  
 #when internet is not connected it will retry sending data
 def do_actions(dic,dt,localtime):
@@ -58,7 +58,7 @@ def writeLog(string,f):
       print('latitude    ' , gpsd.fix.latitude)
       print('longitude   ' , gpsd.fix.longitude)
       print('Time        ' , localtime)
-      string1 = '/home/pi/Documents/LOG/images/img%s.jpg'%(localtime)
+      string1 = (address_prefix+'images/img%s.jpg')%(localtime)
       camera=PiCamera()
       camera.capture(string1)
       camera.close()
