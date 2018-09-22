@@ -75,6 +75,7 @@ def internet_on():
 
 # thread to take accelerometer readings and writing it in a file and firebase
 def accel():
+    global address_prefix
     while True:
         #print(count)
         # print(1)
@@ -127,6 +128,7 @@ def accel():
            # time.sleep(0.5)
         time.sleep(0.5)  
 def writeLog(logfile):
+    global address_prefix
     while True:
       
       # print(1)
