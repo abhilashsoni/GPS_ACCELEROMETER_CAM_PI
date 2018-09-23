@@ -40,7 +40,7 @@ buffer=[]
  
 stop_event = Event()
 #when internet is not connected it will retry sending data
-def write_to_firebase():
+def write_to_firebase(db):
 		global address_prefix
         retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError,IOError)
         time_out=3
@@ -331,7 +331,7 @@ if __name__ == '__main__':
   accel_p = mp.Process(target=accel)
   accel_p.start()
 
-  write_to_firebase()
+  write_to_firebase(db)
 
 # action_thread_1=Thread(target=accel,args=())
 # action_thread_1.start()
