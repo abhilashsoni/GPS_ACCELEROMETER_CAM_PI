@@ -32,19 +32,23 @@ for i in range(5,100,5):
 		ltime = unicode(time.asctime(time.localtime(time.time())),'utf-8')
 		dic [ltime] = dt
 	while (cnt<50):
-		ltime = time.asctime(time.localtime(time.time()))
-		log_ref.update(dic)
-		# acc_file_ref.update({unicode(ltime,'utf-8') :dt})
-		ftime = time.asctime(time.localtime(time.time()))
-		# print(ltime)
-		# print(ftime)
-		start_time = datetime.strptime(ltime, "%a %b %d %H:%M:%S %Y")
-		finish_time = datetime.strptime(ftime, "%a %b %d %H:%M:%S %Y")
-		dif = finish_time - start_time
-		measure = dif.total_seconds()
-		sumtotal = sumtotal + measure
-		sum_square = sum_square + measure*measure
-		# print('Wrote to database')
+		try:
+			ltime = time.asctime(time.localtime(time.time()))
+			log_ref.update(dic)
+			# acc_file_ref.update({unicode(ltime,'utf-8') :dt})
+			ftime = time.asctime(time.localtime(time.time()))
+			# print(ltime)
+			# print(ftime)
+			start_time = datetime.strptime(ltime, "%a %b %d %H:%M:%S %Y")
+			finish_time = datetime.strptime(ftime, "%a %b %d %H:%M:%S %Y")
+			dif = finish_time - start_time
+			measure = dif.total_seconds()
+			sumtotal = sumtotal + measure
+			sum_square = sum_square + measure*measure
+			# print('Wrote to database')
+		except:
+			pass
+		finally:
 		cnt = cnt+1;
 
 	expectation = (float(sumtotal)/(50*i))
