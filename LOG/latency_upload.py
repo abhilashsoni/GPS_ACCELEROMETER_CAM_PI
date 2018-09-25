@@ -52,7 +52,7 @@ for i in range(5,100,5):
 	print("Packet Size : {} Average: {}+- {}".format(i,expectation,sqrt(expectation_sq-expectation*expectation)))
 	Y_list.append(expectation)
 	# print(sqrt(expectation_sq-expectation*expectation))
-
+print( Y_list )	
 plt.plot(X_list,Y_list)
 plt.show()
 
