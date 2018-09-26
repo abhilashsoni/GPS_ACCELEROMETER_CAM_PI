@@ -21,9 +21,9 @@ log_ref.set({u'0' : u"Collected Data below"})
 acc_file_ref.set({u'0' : u"Collected Data below"})
 
 dt = u'sgsgsgsgs'
-X_list = range(5,100,5)
+X_list = range(95,200,5)
 Y_list = []
-for i in range(5,100,5):
+for i in range(95,200,5):
 	cnt = 0
 	sumtotal = 0
 	sum_square = 0
