@@ -21,9 +21,9 @@ log_ref.set({u'0' : u"Collected Data below"})
 acc_file_ref.set({u'0' : u"Collected Data below"})
 
 dt = u'sgsgsgsgs'
-X_list = range(95,200,5)
+X_list = range(200,1500,50)
 Y_list = []
-for i in range(95,200,5):
+for i in X_list :
 	cnt = 0
 	sumtotal = 0
 	sum_square = 0
@@ -31,7 +31,7 @@ for i in range(95,200,5):
 	for j in range(i):
 		ltime = unicode(time.asctime(time.localtime(time.time())),'utf-8')
 		dic [ltime] = dt
-	while (cnt<50):
+	while (cnt<25):
 		try:
 			ltime = time.asctime(time.localtime(time.time()))
 			log_ref.update(dic)
@@ -51,8 +51,8 @@ for i in range(95,200,5):
 		finally:
 		cnt = cnt+1;
 
-	expectation = (float(sumtotal)/(50*i))
-	expectation_sq = float(sum_square)/(50*i*i)
+	expectation = (float(sumtotal)/(cnt*i))
+	expectation_sq = float(sum_square)/(cnt*i*i)
 	print("Packet Size : {} Average: {}+- {}".format(i,expectation,sqrt(expectation_sq-expectation*expectation)))
 	Y_list.append(expectation)
 	# print(sqrt(expectation_sq-expectation*expectation))
