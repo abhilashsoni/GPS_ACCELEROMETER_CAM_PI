@@ -1,5 +1,6 @@
 import sys
 import os
+import math
 # from gps import *
 import time
 import firebase_admin
@@ -49,11 +50,11 @@ for i in X_list :
 		except:
 			pass
 		finally:
-		cnt = cnt+1;
+			cnt = cnt+1
 
 	expectation = (float(sumtotal)/(cnt*i))
 	expectation_sq = float(sum_square)/(cnt*i*i)
-	print("Packet Size : {} Average: {}+- {}".format(i,expectation,sqrt(expectation_sq-expectation*expectation)))
+	print("Packet Size : {} Average: {}+- {}".format(i,expectation,math.sqrt(expectation_sq-expectation*expectation)))
 	Y_list.append(expectation)
 	# print(sqrt(expectation_sq-expectation*expectation))
 print( Y_list )	
