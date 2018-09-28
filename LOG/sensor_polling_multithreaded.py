@@ -67,7 +67,7 @@ def process_directory(localdir):
       for line in lines:
         ltime = line.split(',')[0]
         dic[unicode(ltime,'utf-8')] = unicode(line,'utf-8')
-      doc_ref = db.collection(u'sensor_data_mp').document(localdir)
+      doc_ref = db.collection(u'sensor_data_mt').document(localdir)
       doc_ref.update(dic)        
       f.close()
       os.unlink(localdir+'/'+localfile)
@@ -275,10 +275,10 @@ cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-gps_file_ref = db.collection(u'sensor_data_mp').document(u'gps')
-accel_file_ref = db.collection(u'sensor_data_mp').document(u'accel')
-poldata_file_ref = db.collection(u'sensor_data_mp').document(u'poldata')
-image_file_ref = db.collection(u'sensor_data_mp').document(u'image')
+gps_file_ref = db.collection(u'sensor_data_mt').document(u'gps')
+accel_file_ref = db.collection(u'sensor_data_mt').document(u'accel')
+poldata_file_ref = db.collection(u'sensor_data_mt').document(u'poldata')
+image_file_ref = db.collection(u'sensor_data_mt').document(u'image')
 log_ref.set({})
 acc_file_ref.set({})
 poldata_file_ref.set({})
