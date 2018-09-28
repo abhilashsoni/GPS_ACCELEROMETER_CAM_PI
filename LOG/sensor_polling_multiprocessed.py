@@ -79,13 +79,13 @@ def process_directory(localdir):
 			os.unlink(localdir+'/'+localfile)
 def write_to_firebase(db):
 	global address_prefix
-    retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError,IOError)
-    time_out=10
-    while True:
+	retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError,IOError)
+	time_out=10
+	while True:
 		if(!internet_on()):
 			time.sleep(time_out)
 			continue
-      	try:
+		try:
 			process_directory(u'gps')
 			process_directory(u'image')
 			process_directory(u'poldata')
@@ -114,14 +114,12 @@ def internet_on():
 
 # thread to take accelerometer readings and writing it in a file and firebase
 def writeaccel():
-    global address_prefix,accelfile,accfile_lines_uploaded,accelfile_limit
-    while True:
+	global address_prefix,accelfile,accfile_lines_uploaded,accelfile_limit
+	while True:
 		if ( accelfile_lines >= accfile_limit):
 			ltime=str(time.asctime(time.localtime(time.time())))
 			accelfile = 'accel/'+ltime+ 'accel.txt'
 			accelfile_lines = 0
-      #print(count)
-      # print(1)
 		local = time.asctime(time.localtime(time.time()))
 		# string = address_prefix+'accel.txt'
 		#acc='/accel/acc%s'%local
@@ -150,7 +148,6 @@ def writegps():
 			ltime=str(time.asctime(time.localtime(time.time())))
 			gpsfile = 'gps/'+ltime+ 'gps.txt'
 			gpsfile_lines = 0
-	  # print(1)
 		localtime = time.asctime(time.localtime(time.time()))
 		print(('latitude    ' , gpsd.fix.latitude))
 		print(('longitude   ' , gpsd.fix.longitude))
@@ -159,18 +156,15 @@ def writegps():
 		data="%s\t,Lat:%f\tLong:%f" %(localtime,gpsd.fix.latitude,gpsd.fix.longitude) 
 		f=open(address_prefix+gpsfile,"a+")
 		f.write("%s\n" %data)  
-		f.close()   
-	  
+		f.close()
 		time.sleep(10)  
 def writeimage():
-	global address_prefix,imagefile,imagefile_lines,imagefile_limit,dbuffer
+	global address_prefix,imagefile,imagefile_lines,imagefile_limit
 	while True:
 		if ( imagefile_lines >= imagefile_limit):
 			ltime=str(time.asctime(time.localtime(time.time())))
 			imagefile = 'image/'+ltime+ 'image.txt'
 			imagefile_lines = 0
-      # print(1)
-      
 		localtime = time.asctime(time.localtime(time.time()))
 		# print(('Time        ' , localtime))
 		string1 = address_prefix+'image/img.jpg'
@@ -191,84 +185,80 @@ def writeimage():
 		os.unlink(string1)
 		time.sleep(5)
 def writepol():
-    global address_prefix
-    while True:
-      if ( polfile_lines >= polfile_limit):
-          ltime=str(time.asctime(time.localtime(time.time())))
-          polfile = 'pol/'+ltime+ 'pol.txt'
-          polfile_lines = 0
-      # print(1)
-      global dbuffer
-      
-      avpg=0
-      while avpg==0:
-        #time.sleep(1.5)
-        (count,data1)=pi.bb_serial_read(rx)
-        dbuffer += data1
-        #print(dbuffer)
-        #print(1)
-        while dbuffer and dbuffer[0] != 0x42:
-            dbuffer.pop(0)
-        #print(2)
-        if len(dbuffer) > 200:
-            dbuffer = []  # avoid an overrun if all bad data
-            continue
-        #print(3)
-        if len(dbuffer)<33:
-            continue
-        #print(4)
-        if dbuffer[1] != 0x4d:
-            dbuffer.pop(0)
-            continue
-        #print(5)
-        frame_len = struct.unpack(">H", bytes(dbuffer[2:4]))[0]
-        if frame_len != 28:
-            dbuffer = []
-            continue
-        
-        #if len(dbuffer)<33:
-         #   continue
- 
-        frame = struct.unpack(">HHHHHHHHHHHHHH", bytes(dbuffer[4:32]))
- 
-        pm10_standard, pm25_standard, pm100_standard, pm10_env, \
-            pm25_env, pm100_env, particles_03um, particles_05um, particles_10um, \
-            particles_25um, particles_50um, particles_100um, skip, checksum = frame
- 
-        check = sum(dbuffer[0:30])
- 
-        if check != checksum:
-            dbuffer = []
-            continue
- 
-        print("Concentration Units (standard)")
-        print("---------------------------------------")
-        print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %
-              (pm10_standard, pm25_standard, pm100_standard))
-        print("Concentration Units (environmental)")
-        print("---------------------------------------")
-        print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm10_env, pm25_env, pm100_env))
-        print("---------------------------------------")
-        print("Particles > 0.3um / 0.1L air:", particles_03um)
-        print("Particles > 0.5um / 0.1L air:", particles_05um)
-        print("Particles > 1.0um / 0.1L air:", particles_10um)
-        print("Particles > 2.5um / 0.1L air:", particles_25um)
-        print("Particles > 5.0um / 0.1L air:", particles_50um)
-        print("Particles > 10 um / 0.1L air:", particles_100um)
-        print("---------------------------------------")
-        gf=open(address_prefix+polfile,"a+")
-        ltime=time.asctime(time.localtime(time.time()))
-    #f.write("Time: %s\tPM 1.0: %d\tPM2.5: %d\tPM10: %d" %str(ltime) %pm10_standard %pm25_standard %pm100_standard)
-        s=("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %(pm10_standard, pm25_standard, pm100_standard))
-        pol_data=str(ltime)+','+s+'\n'
-        gf.write(pol_data)
-        gf.close()
-        
-        #fb1.post('Pol_data',data)
-        dbuffer = dbuffer[32:]
-        avpg=1
-        time.sleep(1)
-    
+	global address_prefix,dbuffer
+	while True:
+		if ( polfile_lines >= polfile_limit):
+			ltime=str(time.asctime(time.localtime(time.time())))
+			polfile = 'pol/'+ltime+ 'pol.txt'
+			polfile_lines = 0
+		avpg=0
+		while avpg==0:
+		#time.sleep(1.5)
+		(count,data1)=pi.bb_serial_read(rx)
+		dbuffer += data1
+		#print(dbuffer)
+		#print(1)
+		while dbuffer and dbuffer[0] != 0x42:
+			dbuffer.pop(0)
+		#print(2)
+		if len(dbuffer) > 200:
+			dbuffer = []  # avoid an overrun if all bad data
+			continue
+		#print(3)
+		if len(dbuffer)<33:
+			continue
+		#print(4)
+		if dbuffer[1] != 0x4d:
+			dbuffer.pop(0)
+			continue
+		#print(5)
+		frame_len = struct.unpack(">H", bytes(dbuffer[2:4]))[0]
+		if frame_len != 28:
+			dbuffer = []
+			continue
+
+		#if len(dbuffer)<33:
+		 #   continue
+
+		frame = struct.unpack(">HHHHHHHHHHHHHH", bytes(dbuffer[4:32]))
+
+		pm10_standard, pm25_standard, pm100_standard, pm10_env, \
+			pm25_env, pm100_env, particles_03um, particles_05um, particles_10um, \
+			particles_25um, particles_50um, particles_100um, skip, checksum = frame
+
+		check = sum(dbuffer[0:30])
+
+		if check != checksum:
+			dbuffer = []
+			continue
+
+		print("Concentration Units (standard)")
+		print("---------------------------------------")
+		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %
+				(pm10_standard, pm25_standard, pm100_standard))
+		print("Concentration Units (environmental)")
+		print("---------------------------------------")
+		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm10_env, pm25_env, pm100_env))
+		print("---------------------------------------")
+		print("Particles > 0.3um / 0.1L air:", particles_03um)
+		print("Particles > 0.5um / 0.1L air:", particles_05um)
+		print("Particles > 1.0um / 0.1L air:", particles_10um)
+		print("Particles > 2.5um / 0.1L air:", particles_25um)
+		print("Particles > 5.0um / 0.1L air:", particles_50um)
+		print("Particles > 10 um / 0.1L air:", particles_100um)
+		print("---------------------------------------")
+		gf=open(address_prefix+polfile,"a+")
+		ltime=time.asctime(time.localtime(time.time()))
+		#f.write("Time: %s\tPM 1.0: %d\tPM2.5: %d\tPM10: %d" %str(ltime) %pm10_standard %pm25_standard %pm100_standard)
+		s=("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %(pm10_standard, pm25_standard, pm100_standard))
+		pol_data=str(ltime)+','+s+'\n'
+		gf.write(pol_data)
+		gf.close()
+
+		#fb1.post('Pol_data',data)
+		dbuffer = dbuffer[32:]
+		avpg=1
+		time.sleep(1)
 #Beginning of the program
 IMU.detectIMU()
 IMU.initIMU()
