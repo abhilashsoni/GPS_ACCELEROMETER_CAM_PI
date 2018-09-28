@@ -183,7 +183,7 @@ def writeimage():
 		f.write("%s\n" %data)  
 		f.close()   
 		os.unlink(string1)
-		time.sleep(5)
+		time.sleep(10)
 def writepol():
 	global address_prefix,dbuffer
 	while True:
@@ -258,7 +258,7 @@ def writepol():
 		#fb1.post('Pol_data',data)
 		dbuffer = dbuffer[32:]
 		avpg=1
-		time.sleep(1)
+		time.sleep(0.5)
 #Beginning of the program
 IMU.detectIMU()
 IMU.initIMU()
