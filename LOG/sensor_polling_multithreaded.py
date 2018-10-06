@@ -51,7 +51,7 @@ if not pi.connected:
     
 #pi.set_mode(rx,pigpio.INPUT)
 pi.bb_serial_read_open(rx,9600,8)
-buffer=[]
+dbuffer=[]
  
 #stop_event = Event()
 #when internet is not connected it will retry sending data
