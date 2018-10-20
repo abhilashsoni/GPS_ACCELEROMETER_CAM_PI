@@ -37,13 +37,11 @@ imagefile_limit = 500
 
 gpsfile_lines = gpsfile_limit 
 polfile_lines = polfile_limit
-arduinofile_lines = accelfile_limit
+arduinofile_lines = arduinofile_limit
 imagefile_lines = imagefile_limit
 
 address_prefix =''          #'/home/pi/Documents/LOG/'
-# accfile_lines_uploaded = 0
-# poldata_lines_uploaded = 0
-# data_lines_uploaded = 0
+
 
 
 try:
