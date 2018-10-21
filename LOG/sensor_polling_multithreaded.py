@@ -3,11 +3,11 @@ import os
 # from gps import *
 import time
 # import IMU
-# import zlib, base64
+import zlib
 import firebase_admin
 from firebase_admin import credentials,firestore
 import threading
-# from picamera import PiCamera
+from picamera import PiCamera
 import urllib2
 from threading import Thread, Event
 import requests
@@ -28,7 +28,7 @@ imagefile = ''
 gpsfile_limit = 3000
 polfile_limit = 3000
 arduinofile_limit = 10
-imagefile_limit = 500
+imagefile_limit = 5
 
 
 
@@ -64,7 +64,7 @@ def process_directory(localdir,db):
 			# print ("Processing file {}".format(localfile))
 			f = open(localdir+'/'+localfile,'r')
 			# print ("Opened file {}".format(localfile))
-			lines=f.readlines()
+			lines=f.read().split('@')[1:]
 			f.close()
 			# print ( "Read {} lines in {}".format(len(lines),localdir))
 			dic = {}
@@ -76,7 +76,7 @@ def process_directory(localdir,db):
 			# print ("######################Dictionary made!")
 			doc_ref = db.collection(u'sensor_data_mp').document(localdir)
 			doc_ref.update(dic)    
-			print( "#####################Updated to firebase")    
+			print( "#####################Updated {} to firebase".format(localdir))    
 			
 			os.unlink(localdir+'/'+localfile)
 def write_to_firebase(db):
@@ -90,9 +90,9 @@ def write_to_firebase(db):
 			continue
 		try:
 			# print("Trying to update to firebase")
-			# process_directory(u'gps')
-			# process_directory(u'image')
-			# process_directory(u'poldata')
+			# process_directory(u'gps',db)
+			process_directory(u'image',db)
+			# process_directory(u'poldata',db)
 			process_directory(u'arduino',db)
 		except IOError ,e :
 			print("Error opening file: {}".format(str(e)))
@@ -137,7 +137,7 @@ def writearduino(ser):
 		if(read_serial[0] != 'E' ):
 			continue
 		ltime=str(time.asctime(time.localtime(time.time())))
-		s=("%s\t,\t%s\n"%(ltime,read_serial)) 
+		s=("@%s,%s\n"%(ltime,read_serial)) 
 		fa.write(s)
 		fa.close()
 		arduinofile_lines+=1
@@ -180,15 +180,16 @@ def writeimage():
 		imag=string1
 		#encoding jpeg to text and compressing the text
 		with open(imag,"rb") as imageFile:
-			image_64= base64.b64encode(zlib.compress(bytes(imag,'utf-8'),9))
+			image_64= zlib.compress(imageFile.read()).encode('base64')
 		#delete image file
-		data="%s,ImgAsTxt:%s" %(localtime,image_64) 
+		data="@%s,%s\n" %(localtime,image_64) 
 		f=open(imagefile,"a+")
-		f.write("%s\n" %data)  
+		f.write(data)  
 		f.close()   
 		imagefile_lines+=1
+		print("Wrote an image line!")
 		os.unlink(string1)
-		time.sleep(10)
+		time.sleep(2)
 # def writepol():
 # 	global address_prefix,dbuffer
 # 	while True:
@@ -311,8 +312,8 @@ arduino_thread=Thread(target=writearduino,args=(ser,))
 arduino_thread.start()
 # gps_thread=Thread(target=writegps)
 # gps_thread.start()
-# image_thread=Thread(target=writeimage)
-# image_thread.start()
+image_thread=Thread(target=writeimage)
+image_thread.start()
 # pol_thread=Thread(target=writepol)
 # pol_thread.start()
 
