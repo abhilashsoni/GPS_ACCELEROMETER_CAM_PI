@@ -81,7 +81,7 @@ def write_to_firebase(db):
 	retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError,IOError)
 	time_out=10
 	while True:
-		if(!internet_on()):
+		if(not internet_on()):
 			time.sleep(time_out)
 			continue
 		try:
