@@ -3,26 +3,26 @@ import os
 from gps import *
 import time
 # import threading
-import IMU
+# import IMU
 import zlib, base64
 import firebase_admin
 from firebase_admin import credentials,firestore
 from picamera import PiCamera
-import urllib
+import urllib2
 # from threading import Thread, Event
 import multiprocessing as mp
 import requests
 import errno
 from socket import error as SocketError
 import difflib
-import pigpio
+# import pigpio
 import serial
 
-rx=26
+# rx=26
 
 
 polfile = ''
-accelfile = ''
+arduinofile = ''
 gpsfile = ''
 imagefile = ''
 
@@ -30,20 +30,18 @@ imagefile = ''
 
 gpsfile_limit = 3000
 polfile_limit = 3000
-accelfile_limit = 3000
+arduinofile_limit = 3000
 imagefile_limit = 500
 
 
 
 gpsfile_lines = gpsfile_limit 
 polfile_lines = polfile_limit
-accelfile_lines = accelfile_limit
+arduinofile_lines = arduinofile_limit
 imagefile_lines = imagefile_limit
 
 address_prefix =''          #'/home/pi/Documents/LOG/'
-# accfile_lines_uploaded = 0
-# poldata_lines_uploaded = 0
-# data_lines_uploaded = 0
+
 
 
 try:
@@ -51,28 +49,29 @@ try:
 except ImportError:
     import ustruct as struct
     
-pi=pigpio.pi()
-if not pi.connected:
-    exit(0)
+# pi=pigpio.pi()
+# if not pi.connected:
+#     exit(0)
     
 #pi.set_mode(rx,pigpio.INPUT)
-pi.bb_serial_read_open(rx,9600,8)
-dbuffer=[]
+# pi.bb_serial_read_open(rx,9600,8)
+# dbuffer=[]
  
 #stop_event = Event()
 #when internet is not connected it will retry sending data
 
-def process_directory(localdir):
+def process_directory(localdir,db):
 	flist = os.listdir(localdir)
 	if (len(flist)>2):
-		for localfile in flist[1:-1]:
-			f = open(localfile,'r')
+		for localfile in flist[1:-1]:		#0th file in .keep , last file is currently in use
+			f = open(localdir+'/'+localfile,'r')
 			lines=f.readlines()
 			dic = {}
 			# if (len(lines)>data_lines_uploaded):
 			for line in lines:
-			ltime = line.split(',')[0]
-			dic[unicode(ltime,'utf-8')] = unicode(line,'utf-8')
+				linelist = line.split(',')
+				ltime = linelist[0]
+				dic[unicode(ltime,'utf-8')] = unicode(linelist[1],'utf-8')
 			doc_ref = db.collection(u'sensor_data_mp').document(localdir)
 			doc_ref.update(dic)        
 			f.close()
@@ -86,10 +85,12 @@ def write_to_firebase(db):
 			time.sleep(time_out)
 			continue
 		try:
-			process_directory(u'gps')
-			process_directory(u'image')
-			process_directory(u'poldata')
-			process_directory(u'accel')
+			process_directory(u'gps',db)
+			process_directory(u'image',db)
+			process_directory(u'poldata',db)
+			process_directory(u'arduino',db)
+		except IOError ,e :
+			print("Error opening file: {}".format(str(e)))
 		except retry_on:
 			pass
 		finally:
@@ -98,9 +99,9 @@ def write_to_firebase(db):
 
 #checks it internet connection is available
 def internet_on():
-	exc = (urllib.URLError, urllib.HTTPError)
+	exc = (urllib2.URLError, urllib2.HTTPError)
 	try:
-		urllib.urlopen('http://216.58.192.142',timeout=3)
+		urllib2.urlopen('http://216.58.192.142',timeout=3)
 		return True
 	except exc:			
 		return False
@@ -113,33 +114,26 @@ def internet_on():
 		pass
 
 # thread to take accelerometer readings and writing it in a file and firebase
-def writeaccel():
-	global address_prefix,accelfile,accfile_lines_uploaded,accelfile_limit
+writearduino(ser):
+	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
 	while True:
-		if ( accelfile_lines >= accfile_limit):
+		if ( arduinofile_lines >= arduinofile_limit):
 			ltime=str(time.asctime(time.localtime(time.time())))
-			accelfile = 'accel/'+ltime+ 'accel.txt'
-			accelfile_lines = 0
-		local = time.asctime(time.localtime(time.time()))
+			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
+			arduinofile_lines = 0
 		# string = address_prefix+'accel.txt'
 		#acc='/accel/acc%s'%local
-		fa=open(address_prefix+accelfile,"a+")
+		fa=open(address_prefix+arduinofile,"a+")
 		#collecting the value of accelerometer every .5 sec So 60 values in 30sec
-		ACCx=IMU.readACCx()
-		ACCy=IMU.readACCy()
-		ACCz=IMU.readACCz()
-		x=((ACCx*0.244)/100)
-		y=((ACCy*0.244)/100)
-		z=((ACCz*0.244)/100)
-		print(("X = %f\t"%x),)
-		print(("Y = %f\t"%y),c)
-		print(("Z = %f\t"%z))    
-		#ts=time.asctime(time.localtime(time.time()))
-		coordinates = "X = %f\tY = %f\tZ=%f"%(x,y,z)
-		time_str = str(local)
-		s=("%s\t,\t%s\n"%(time_str,coordinates)) 
+		read_serial = ser.readline().strip()
+		if(read_serial[0] != 'E' ):
+			continue
+		ltime=str(time.asctime(time.localtime(time.time())))
+		s=("%s\t,\t%s\n"%(ltime,read_serial)) 
 		fa.write(s)
 		fa.close()
+		arduinofile_lines+=1
+		# print ("Wrote the reading {}".format(read_serial))
 		time.sleep(0.5)
 def writegps():
 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
@@ -157,6 +151,7 @@ def writegps():
 		f=open(address_prefix+gpsfile,"a+")
 		f.write("%s\n" %data)  
 		f.close()
+		gpsfile_lines+=1
 		time.sleep(10)  
 def writeimage():
 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
@@ -182,87 +177,88 @@ def writeimage():
 		f=open(imagefile,"a+")
 		f.write("%s\n" %data)  
 		f.close()   
+		imagefile_lines+=1
 		os.unlink(string1)
 		time.sleep(10)
-def writepol():
-	global address_prefix,dbuffer
-	while True:
-		if ( polfile_lines >= polfile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
-			polfile = 'pol/'+ltime+ 'pol.txt'
-			polfile_lines = 0
-		avpg=0
-		while avpg==0:
-		#time.sleep(1.5)
-		(count,data1)=pi.bb_serial_read(rx)
-		dbuffer += data1
-		#print(dbuffer)
-		#print(1)
-		while dbuffer and dbuffer[0] != 0x42:
-			dbuffer.pop(0)
-		#print(2)
-		if len(dbuffer) > 200:
-			dbuffer = []  # avoid an overrun if all bad data
-			continue
-		#print(3)
-		if len(dbuffer)<33:
-			continue
-		#print(4)
-		if dbuffer[1] != 0x4d:
-			dbuffer.pop(0)
-			continue
-		#print(5)
-		frame_len = struct.unpack(">H", bytes(dbuffer[2:4]))[0]
-		if frame_len != 28:
-			dbuffer = []
-			continue
+# def writepol():
+# 	global address_prefix,dbuffer
+# 	while True:
+# 		if ( polfile_lines >= polfile_limit):
+# 			ltime=str(time.asctime(time.localtime(time.time())))
+# 			polfile = 'pol/'+ltime+ 'pol.txt'
+# 			polfile_lines = 0
+# 		avpg=0
+# 		while avpg==0:
+# 		#time.sleep(1.5)
+# 		(count,data1)=pi.bb_serial_read(rx)
+# 		dbuffer += data1
+# 		#print(dbuffer)
+# 		#print(1)
+# 		while dbuffer and dbuffer[0] != 0x42:
+# 			dbuffer.pop(0)
+# 		#print(2)
+# 		if len(dbuffer) > 200:
+# 			dbuffer = []  # avoid an overrun if all bad data
+# 			continue
+# 		#print(3)
+# 		if len(dbuffer)<33:
+# 			continue
+# 		#print(4)
+# 		if dbuffer[1] != 0x4d:
+# 			dbuffer.pop(0)
+# 			continue
+# 		#print(5)
+# 		frame_len = struct.unpack(">H", bytes(dbuffer[2:4]))[0]
+# 		if frame_len != 28:
+# 			dbuffer = []
+# 			continue
 
-		#if len(dbuffer)<33:
-		 #   continue
+# 		#if len(dbuffer)<33:
+# 		 #   continue
 
-		frame = struct.unpack(">HHHHHHHHHHHHHH", bytes(dbuffer[4:32]))
+# 		frame = struct.unpack(">HHHHHHHHHHHHHH", bytes(dbuffer[4:32]))
 
-		pm10_standard, pm25_standard, pm100_standard, pm10_env, \
-			pm25_env, pm100_env, particles_03um, particles_05um, particles_10um, \
-			particles_25um, particles_50um, particles_100um, skip, checksum = frame
+# 		pm10_standard, pm25_standard, pm100_standard, pm10_env, \
+# 			pm25_env, pm100_env, particles_03um, particles_05um, particles_10um, \
+# 			particles_25um, particles_50um, particles_100um, skip, checksum = frame
 
-		check = sum(dbuffer[0:30])
+# 		check = sum(dbuffer[0:30])
 
-		if check != checksum:
-			dbuffer = []
-			continue
+# 		if check != checksum:
+# 			dbuffer = []
+# 			continue
 
-		print("Concentration Units (standard)")
-		print("---------------------------------------")
-		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %
-				(pm10_standard, pm25_standard, pm100_standard))
-		print("Concentration Units (environmental)")
-		print("---------------------------------------")
-		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm10_env, pm25_env, pm100_env))
-		print("---------------------------------------")
-		print("Particles > 0.3um / 0.1L air:", particles_03um)
-		print("Particles > 0.5um / 0.1L air:", particles_05um)
-		print("Particles > 1.0um / 0.1L air:", particles_10um)
-		print("Particles > 2.5um / 0.1L air:", particles_25um)
-		print("Particles > 5.0um / 0.1L air:", particles_50um)
-		print("Particles > 10 um / 0.1L air:", particles_100um)
-		print("---------------------------------------")
-		gf=open(address_prefix+polfile,"a+")
-		ltime=time.asctime(time.localtime(time.time()))
-		#f.write("Time: %s\tPM 1.0: %d\tPM2.5: %d\tPM10: %d" %str(ltime) %pm10_standard %pm25_standard %pm100_standard)
-		s=("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %(pm10_standard, pm25_standard, pm100_standard))
-		pol_data=str(ltime)+','+s+'\n'
-		gf.write(pol_data)
-		gf.close()
+# 		print("Concentration Units (standard)")
+# 		print("---------------------------------------")
+# 		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %
+# 				(pm10_standard, pm25_standard, pm100_standard))
+# 		print("Concentration Units (environmental)")
+# 		print("---------------------------------------")
+# 		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm10_env, pm25_env, pm100_env))
+# 		print("---------------------------------------")
+# 		print("Particles > 0.3um / 0.1L air:", particles_03um)
+# 		print("Particles > 0.5um / 0.1L air:", particles_05um)
+# 		print("Particles > 1.0um / 0.1L air:", particles_10um)
+# 		print("Particles > 2.5um / 0.1L air:", particles_25um)
+# 		print("Particles > 5.0um / 0.1L air:", particles_50um)
+# 		print("Particles > 10 um / 0.1L air:", particles_100um)
+# 		print("---------------------------------------")
+# 		gf=open(address_prefix+polfile,"a+")
+# 		ltime=time.asctime(time.localtime(time.time()))
+# 		#f.write("Time: %s\tPM 1.0: %d\tPM2.5: %d\tPM10: %d" %str(ltime) %pm10_standard %pm25_standard %pm100_standard)
+# 		s=("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %(pm10_standard, pm25_standard, pm100_standard))
+# 		pol_data=str(ltime)+','+s+'\n'
+# 		gf.write(pol_data)
+# 		gf.close()
 
-		#fb1.post('Pol_data',data)
-		dbuffer = dbuffer[32:]
-		avpg=1
-		time.sleep(0.5)
+# 		#fb1.post('Pol_data',data)
+# 		dbuffer = dbuffer[32:]
+# 		avpg=1
+# 		time.sleep(0.5)
 #Beginning of the program
-IMU.detectIMU()
-IMU.initIMU()
-gpsd = None
+# IMU.detectIMU()
+# IMU.initIMU()
+# gpsd = None
 
 logfile=address_prefix+"LOG.txt"
 #Your database name in firebase
@@ -272,11 +268,11 @@ firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 gps_file_ref = db.collection(u'sensor_data_mp').document(u'gps')
-accel_file_ref = db.collection(u'sensor_data_mp').document(u'accel')
+arduino_file_ref = db.collection(u'sensor_data_mp').document(u'arduino')
 poldata_file_ref = db.collection(u'sensor_data_mp').document(u'poldata')
 image_file_ref = db.collection(u'sensor_data_mp').document(u'image')
 log_ref.set({})
-acc_file_ref.set({})
+arduino_file_ref.set({})
 poldata_file_ref.set({})
 image_file_ref.set({})
 os.system('clear')
@@ -284,31 +280,32 @@ os.system('clear')
 
 
 
-class GpsPoller():
-  def __init__(self):
-    # threading.Thread.__init__(self)
-    global gpsd
-    gpsd = gps(mode=WATCH_ENABLE) 
-    self.current_value = None
-    self.running = True
-  def poll_gps(self):
-  	global gpsd
-    while gpsp.running:
-      next(gpsd) 
-  def run(self):
-    p = mp.Process(target=self.poll_gps)
-    p.start()
-if __name__ == '__main__':
+# class GpsPoller():
+#   def __init__(self):
+#     # threading.Thread.__init__(self)
+#     global gpsd
+#     gpsd = gps(mode=WATCH_ENABLE) 
+#     self.current_value = None
+#     self.running = True
+#   def poll_gps(self):
+#   	global gpsd
+#     while gpsp.running:
+#       next(gpsd) 
+#   def run(self):
+#     p = mp.Process(target=self.poll_gps)
+#     p.start()
+# if __name__ == '__main__':
 
-  gpsp = GpsPoller() 
-  gpsp.run()
+#   gpsp = GpsPoller() 
+#   gpsp.run()
+  ser = serial.Serial('/dev/ttyUSB0',9600)
 
-  accel_p = mp.Process(target=writeaccel)
+  accel_p = mp.Process(target=writearduino,args=(ser,))
   accel_p.start()
-  gps_p = mp.Process(target=writegps)
-  gps_p.start()
-  pol_p = mp.Process(target=writepol)
-  pol_p.start()
+#   gps_p = mp.Process(target=writegps)
+#   gps_p.start()
+#   pol_p = mp.Process(target=writepol)
+#   pol_p.start()
   image_p = mp.Process(target=writeimage)
   image_p.start()
 
