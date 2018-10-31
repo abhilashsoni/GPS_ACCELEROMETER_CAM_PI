@@ -159,7 +159,7 @@ def writearduino(ser):
 		fa.close()
 		arduinofile_lines+=1
 		print ("Wrote from arduino")
-		time.sleep(0.016)
+		time.sleep(0.035)
 
 # def writegps():
 # 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
