@@ -2,6 +2,7 @@ import sys
 import os
 # from gps import *
 import time
+from datetime import datetime
 # import IMU
 import zlib
 import firebase_admin
@@ -99,6 +100,7 @@ def write_to_firebase(db):
 			process_directory(u'image',db)
 			process_directory(u'poldata',db)
 			process_directory(u'arduino',db)
+			process_directory(u'bme',db)
 			time.sleep(time_out)
 		except IOError ,e :
 			print("Error opening file: {}".format(str(e)))
@@ -133,7 +135,7 @@ def writearduino(ser):
 	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
 	while True:
 		if ( arduinofile_lines >= arduinofile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
 			arduinofile_lines = 0
 		# string = address_prefix+'accel.txt'
@@ -152,7 +154,7 @@ def writearduino(ser):
 			continue
 		if(read_serial[0] != 'E' ):
 			continue
-		ltime=str(time.asctime(time.localtime(time.time())))
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 		s=("@%s,%s\n"%(ltime,read_serial)) 
 		fa=open(address_prefix+arduinofile,"a+")
 		fa.write(s)
@@ -165,10 +167,10 @@ def writearduino(ser):
 # 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
 # 	while True:
 # 		if ( gpsfile_lines >= gpsfile_limit):
-# 			ltime=str(time.asctime(time.localtime(time.time())))
+# 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 # 			gpsfile = 'gps/'+ltime+ 'gps.txt'
 # 			gpsfile_lines = 0
-# 		localtime = time.asctime(time.localtime(time.time()))
+# 		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 # 		print(('latitude    ' , gpsd.fix.latitude))
 # 		print(('longitude   ' , gpsd.fix.longitude))
 # 		print(('Time        ' , localtime))
@@ -183,10 +185,10 @@ def writeimage():
 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
 	while True:
 		if ( imagefile_lines >= imagefile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 			imagefile = 'image/'+ltime+ 'image.txt'
 			imagefile_lines = 0
-		localtime = time.asctime(time.localtime(time.time()))
+		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 		# print(('Time        ' , localtime))
 		string1 = address_prefix+'image/img.jpg'
 		camera=PiCamera()
@@ -211,10 +213,10 @@ def writepol(pol_data):
 	global address_prefix,polfile,polfile_limit,polfile_lines
 	
 	if ( polfile_lines >= polfile_limit):
-		ltime=str(time.asctime(time.localtime(time.time())))
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 		polfile = 'poldata/'+ltime+ 'pol.txt'
 		polfile_lines = 0
-	localtime = time.asctime(time.localtime(time.time()))
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
 	data="@%s\t,%s" %(localtime,pol_data) 
 	f=open(address_prefix+polfile,"a+")
@@ -227,10 +229,10 @@ def writebme(bme_data):
 	global address_prefix,bmefile,bmefile_limit,bmefile_lines
 	
 	if ( bmefile_lines >= bmefile_limit):
-		ltime=str(time.asctime(time.localtime(time.time())))
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 		bmefile = 'bme/'+ltime+ 'bme.txt'
 		bmefile_lines = 0
-	localtime = time.asctime(time.localtime(time.time()))
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
 
 	data="@%s\t,%s" %(localtime,bme_data) 
 	f=open(address_prefix+bmefile,"a+")
