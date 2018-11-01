@@ -8,7 +8,7 @@ import zlib
 import firebase_admin
 from firebase_admin import credentials,firestore
 import threading
-# from picamera import PiCamera
+from picamera import PiCamera
 import urllib2
 from threading import Thread, Event
 import requests
@@ -16,7 +16,7 @@ import errno
 from socket import error as SocketError
 import difflib
 # import pigpio
-# import serial
+import serial
 # rx=26
 
 polfile = ''
@@ -84,8 +84,7 @@ def process_directory(localdir,db):
 				doc_ref = db.collection(u'sensor_data_mt').document(localdir)
 				doc_ref.update(dic)    
 				print( "#####################Updated {} to firebase".format(localdir))    
-			
-			os.unlink(localdir+'/'+localfile)
+				os.unlink(localdir+'/'+localfile)
 
 def write_to_firebase(db):
 	global address_prefix
@@ -136,37 +135,37 @@ def internet_on():
 		pass
 
 # thread to take accelerometer readings and writing it in a file and firebase
-# def writearduino(ser):
-# 	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
-# 	while True:
-# 		if ( arduinofile_lines >= arduinofile_limit):
-# 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-# 			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
-# 			arduinofile_lines = 0
-# 		# string = address_prefix+'accel.txt'
-# 		#acc='/accel/acc%s'%local
+def writearduino(ser):
+	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
+	while True:
+		if ( arduinofile_lines >= arduinofile_limit):
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
+			arduinofile_lines = 0
+		# string = address_prefix+'accel.txt'
+		#acc='/accel/acc%s'%local
 		
-# 		#collecting the value of accelerometer every 16 msec
-# 		read_serial = ser.readline().strip()
-# 		print("Read: {}".format(read_serial))
-# 		if (len(read_serial)<10):
-# 			continue
-# 		if(read_serial[0:3] == 'PMS' ):
-# 			writepol(read_serial)
-# 			continue
-# 		if(read_serial[0:3] == 'BME' ):
-# 			writebme(read_serial)
-# 			continue
-# 		if(read_serial[0] != 'E' ):
-# 			continue
-# 		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-# 		s=("@%s,%s\n"%(ltime,read_serial)) 
-# 		fa=open(address_prefix+arduinofile,"a+")
-# 		fa.write(s)
-# 		fa.close()
-# 		arduinofile_lines+=1
-# 		print ("Wrote from arduino")
-# 		time.sleep(0.035)
+		#collecting the value of accelerometer every 16 msec
+		read_serial = ser.readline().strip()
+		print("Read: {}".format(read_serial))
+		if (len(read_serial)<10):
+			continue
+		if(read_serial[0:3] == 'PMS' ):
+			writepol(read_serial)
+			continue
+		if(read_serial[0:3] == 'BME' ):
+			writebme(read_serial)
+			continue
+		if(read_serial[0] != 'E' ):
+			continue
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		s=("@%s,%s\n"%(ltime,read_serial)) 
+		fa=open(address_prefix+arduinofile,"a+")
+		fa.write(s)
+		fa.close()
+		arduinofile_lines+=1
+		print ("Wrote from arduino")
+		time.sleep(0.035)
 
 # def writegps():
 # 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
@@ -186,66 +185,66 @@ def internet_on():
 # 		f.close()
 # 		gpsfile_lines+=1
 # 		time.sleep(10)  
-# def writeimage():
-# 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
-# 	while True:
-# 		if ( imagefile_lines >= imagefile_limit):
-# 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-# 			imagefile = 'image/'+ltime+ 'image.txt'
-# 			imagefile_lines = 0
-# 		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-# 		# print(('Time        ' , localtime))
-# 		string1 = address_prefix+'image/img.jpg'
-# 		camera=PiCamera()
-# 		camera.capture(string1)
-# 		camera.close()
-# 		# time.sleep(0.5)
-# 		# print(string1)
-# 		imag=string1
-# 		#encoding jpeg to text and compressing the text
-# 		with open(imag,"rb") as imageFile:
-# 			image_64= zlib.compress(imageFile.read()).encode('base64')
-# 		#delete image file
-# 		data="@%s,%s\n" %(localtime,image_64) 
-# 		f=open(imagefile,"a+")
-# 		f.write(data)  
-# 		f.close()   
-# 		imagefile_lines+=1
-# 		print("Wrote an image line!")
-# 		os.unlink(string1)
-# 		time.sleep(2)
-# def writepol(pol_data):
-# 	global address_prefix,polfile,polfile_limit,polfile_lines
+def writeimage():
+	global address_prefix,imagefile,imagefile_lines,imagefile_limit
+	while True:
+		if ( imagefile_lines >= imagefile_limit):
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+			imagefile = 'image/'+ltime+ 'image.txt'
+			imagefile_lines = 0
+		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
+		# print(('Time        ' , localtime))
+		string1 = address_prefix+'image/img.jpg'
+		camera=PiCamera()
+		camera.capture(string1)
+		camera.close()
+		# time.sleep(0.5)
+		# print(string1)
+		imag=string1
+		#encoding jpeg to text and compressing the text
+		with open(imag,"rb") as imageFile:
+			image_64= zlib.compress(imageFile.read()).encode('base64')
+		#delete image file
+		data="@%s,%s\n" %(localtime,image_64) 
+		f=open(imagefile,"a+")
+		f.write(data)  
+		f.close()   
+		imagefile_lines+=1
+		print("Wrote an image line!")
+		os.unlink(string1)
+		time.sleep(2)
+def writepol(pol_data):
+	global address_prefix,polfile,polfile_limit,polfile_lines
 	
-# 	if ( polfile_lines >= polfile_limit):
-# 		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-# 		polfile = 'poldata/'+ltime+ 'pol.txt'
-# 		polfile_lines = 0
-# 	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+	if ( polfile_lines >= polfile_limit):
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		polfile = 'poldata/'+ltime+ 'pol.txt'
+		polfile_lines = 0
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
-# 	data="@%s\t,%s" %(localtime,pol_data) 
-# 	f=open(address_prefix+polfile,"a+")
-# 	f.write("%s\n" %data)  
-# 	f.close()
-# 	polfile_lines+=1
-# 	print ("Wrote a poldata line!")
-# 	return	
-# def writebme(bme_data):
-# 	global address_prefix,bmefile,bmefile_limit,bmefile_lines
+	data="@%s\t,%s" %(localtime,pol_data) 
+	f=open(address_prefix+polfile,"a+")
+	f.write("%s\n" %data)  
+	f.close()
+	polfile_lines+=1
+	print ("Wrote a poldata line!")
+	return	
+def writebme(bme_data):
+	global address_prefix,bmefile,bmefile_limit,bmefile_lines
 	
-# 	if ( bmefile_lines >= bmefile_limit):
-# 		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-# 		bmefile = 'bme/'+ltime+ 'bme.txt'
-# 		bmefile_lines = 0
-# 	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+	if ( bmefile_lines >= bmefile_limit):
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		bmefile = 'bme/'+ltime+ 'bme.txt'
+		bmefile_lines = 0
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
-# 	data="@%s\t,%s" %(localtime,bme_data) 
-# 	f=open(address_prefix+bmefile,"a+")
-# 	f.write("%s\n" %data)  
-# 	f.close()
-# 	bmefile_lines+=1
-# 	print ("Wrote a bmedata line!")
-# 	return	
+	data="@%s\t,%s" %(localtime,bme_data) 
+	f=open(address_prefix+bmefile,"a+")
+	f.write("%s\n" %data)  
+	f.close()
+	bmefile_lines+=1
+	print ("Wrote a bmedata line!")
+	return	
 		
 
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -283,17 +282,17 @@ os.system('clear')
 # count=0
 
 
-# ser = serial.Serial('/dev/ttyUSB0',9600)
+ser = serial.Serial('/dev/ttyUSB0',9600)
 
-# arduino_thread=Thread(target=writearduino,args=(ser,))
-# arduino_thread.start()
+arduino_thread=Thread(target=writearduino,args=(ser,))
+arduino_thread.start()
 # gps_thread=Thread(target=writegps)
 # gps_thread.start()
-# image_thread=Thread(target=writeimage)
-# image_thread.start()
+image_thread=Thread(target=writeimage)
+image_thread.start()
 
 
 
 
-write_to_firebase(db)
+# write_to_firebase(db)
 # f.close()
