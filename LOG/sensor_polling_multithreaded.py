@@ -27,11 +27,11 @@ bmefile = ''
 
 
 
-gpsfile_limit = 200
-polfile_limit = 200
-bmefile_limit = 200
-arduinofile_limit = 200
-imagefile_limit = 50
+gpsfile_limit = 2000
+polfile_limit = 2000
+bmefile_limit = 2000
+arduinofile_limit = 10000
+imagefile_limit = 4
 
 
 
@@ -70,7 +70,7 @@ def process_directory(localdir,db):
 			# print ("Opened file {}".format(localfile))
 			lines=f.read().split('@')[1:]
 			f.close()
-			print ( "Read {} lines in {}".format(len(lines),localdir))
+			# print ( "Read {} lines in {}".format(len(lines),localdir))
 			dic = {}
 			# if (len(lines)>data_lines_uploaded):
 			for line in lines:
@@ -78,13 +78,14 @@ def process_directory(localdir,db):
 				ltime = linelist[0]
 				dic[unicode(ltime,'utf-8')] = unicode(linelist[1],'utf-8')
 
-			print ("######################Dictionary made!")
+			# print ("######################Dictionary made!")
 			# print(str(dic))
 			if (len(dic)>0):
-				doc_ref = db.collection(u'sensor_data_mt').document(localdir)
-				doc_ref.update(dic)    
+				doc_ref = db.collection(localdir).document(localfile)
+				doc_ref.set(dic)    
 				print( "#####################Updated {} to firebase".format(localdir))    
-				os.unlink(localdir+'/'+localfile)
+				os.system('mv '+localdir+'/'+localfile+' backup/'+localdir+'/')
+				# os.unlink(localdir+'/'+localfile)
 
 def write_to_firebase(db):
 	global address_prefix
@@ -129,9 +130,9 @@ def internet_on():
 	# 	# print("Internet connection not present")
 	# 	return False
 	except SocketError as e:
-		if e.errno !=errno.ECONNRESET:
+		# if e.errno !=errno.ECONNRESET:
 		    #print(3)
-		    raise
+		    # raise
 		pass
 
 # thread to take accelerometer readings and writing it in a file and firebase
@@ -251,11 +252,11 @@ cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-gps_file_ref = db.collection(u'sensor_data_mt').document(u'gps')
-arduino_file_ref = db.collection(u'sensor_data_mt').document(u'arduino')
-polfile_ref = db.collection(u'sensor_data_mt').document(u'poldata')
-image_file_ref = db.collection(u'sensor_data_mt').document(u'image')
-bme_file_ref = db.collection(u'sensor_data_mt').document(u'bme')
+# gps_file_ref = db.collection(u'gps').document(u'gps')
+# arduino_file_ref = db.collection(u'sensor_data_mt').document(u'arduino')
+# polfile_ref = db.collection(u'sensor_data_mt').document(u'poldata')
+# image_file_ref = db.collection(u'sensor_data_mt').document(u'image')
+# bme_file_ref = db.collection(u'sensor_data_mt').document(u'bme')
 # gps_file_ref.set({})
 # arduino_file_ref.set({})
 # polfile_ref.set({})
@@ -294,5 +295,4 @@ image_thread.start()
 
 
 
-# write_to_firebase(db)
-# f.close()
+write_to_firebase(db)
