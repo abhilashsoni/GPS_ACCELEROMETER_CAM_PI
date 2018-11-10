@@ -62,7 +62,7 @@ except ImportError:
 
 def process_directory(localdir,db):
 	flist = os.listdir(localdir)
-	# print ("No of files in {} = {}".format(localdir,len(flist)))
+	print ("No of files in {} = {}".format(localdir,len(flist)))
 	if (len(flist)>2):
 		for localfile in flist[1:-1]:				#0th file in .keep , last file is currently in use
 			# print ("Processing file {}".format(localfile))
@@ -70,19 +70,21 @@ def process_directory(localdir,db):
 			# print ("Opened file {}".format(localfile))
 			lines=f.read().split('@')[1:]
 			f.close()
-			# print ( "Read {} lines in {}".format(len(lines),localdir))
+			print ( "Read {} lines in {}".format(len(lines),localdir))
 			dic = {}
 			# if (len(lines)>data_lines_uploaded):
 			for line in lines:
 				linelist = line.split(',')
 				ltime = linelist[0]
 				dic[unicode(ltime,'utf-8')] = unicode(linelist[1],'utf-8')
-			# print ("######################Dictionary made!")
-			doc_ref = db.collection(u'sensor_data_mp').document(localdir)
-			doc_ref.update(dic)    
-			print( "#####################Updated {} to firebase".format(localdir))    
-			
-			os.unlink(localdir+'/'+localfile)
+
+			print ("######################Dictionary made!")
+			# print(str(dic))
+			if (len(dic)>0):
+				doc_ref = db.collection(u'sensor_data_mt').document(localdir)
+				doc_ref.update(dic)    
+				print( "#####################Updated {} to firebase".format(localdir))    
+				os.unlink(localdir+'/'+localfile)
 
 def write_to_firebase(db):
 	global address_prefix
@@ -105,7 +107,9 @@ def write_to_firebase(db):
 		except IOError ,e :
 			print("Error opening file: {}".format(str(e)))
 			time.sleep(time_out)
-		except :
+		except Exception, e:
+			print('Error {} : {}'.format(type(e).__name__,e.message))
+			# print(e.message)
 			pass
 		finally:
 			time.sleep(time_out)
@@ -121,9 +125,9 @@ def internet_on():
 	except exc:		
 		# print("Internet connection not present")	
 		return False
-	except socket.timeout:
-		# print("Internet connection not present")
-		return False
+	# except socket.timeout:
+	# 	# print("Internet connection not present")
+	# 	return False
 	except SocketError as e:
 		if e.errno !=errno.ECONNRESET:
 		    #print(3)
@@ -135,7 +139,7 @@ def writearduino(ser):
 	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
 	while True:
 		if ( arduinofile_lines >= arduinofile_limit):
-			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
 			arduinofile_lines = 0
 		# string = address_prefix+'accel.txt'
@@ -154,7 +158,7 @@ def writearduino(ser):
 			continue
 		if(read_serial[0] != 'E' ):
 			continue
-		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 		s=("@%s,%s\n"%(ltime,read_serial)) 
 		fa=open(address_prefix+arduinofile,"a+")
 		fa.write(s)
@@ -185,10 +189,10 @@ def writeimage():
 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
 	while True:
 		if ( imagefile_lines >= imagefile_limit):
-			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 			imagefile = 'image/'+ltime+ 'image.txt'
 			imagefile_lines = 0
-		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 		# print(('Time        ' , localtime))
 		string1 = address_prefix+'image/img.jpg'
 		camera=PiCamera()
@@ -213,10 +217,10 @@ def writepol(pol_data):
 	global address_prefix,polfile,polfile_limit,polfile_lines
 	
 	if ( polfile_lines >= polfile_limit):
-		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 		polfile = 'poldata/'+ltime+ 'pol.txt'
 		polfile_lines = 0
-	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
 	data="@%s\t,%s" %(localtime,pol_data) 
 	f=open(address_prefix+polfile,"a+")
@@ -229,10 +233,10 @@ def writebme(bme_data):
 	global address_prefix,bmefile,bmefile_limit,bmefile_lines
 	
 	if ( bmefile_lines >= bmefile_limit):
-		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 		bmefile = 'bme/'+ltime+ 'bme.txt'
 		bmefile_lines = 0
-	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
 	data="@%s\t,%s" %(localtime,bme_data) 
 	f=open(address_prefix+bmefile,"a+")
@@ -242,14 +246,7 @@ def writebme(bme_data):
 	print ("Wrote a bmedata line!")
 	return	
 		
-#Beginning of the program
-# IMU.detectIMU()
-# IMU.initIMU()
-# gpsd = None
 
-# logfile=address_prefix+"LOG.txt"
-#Your database name in firebase
-# firebase=firebase.FirebaseApplication('https://sensor-with-avpg.firebaseio.com/', None)
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
@@ -259,11 +256,11 @@ arduino_file_ref = db.collection(u'sensor_data_mt').document(u'arduino')
 polfile_ref = db.collection(u'sensor_data_mt').document(u'poldata')
 image_file_ref = db.collection(u'sensor_data_mt').document(u'image')
 bme_file_ref = db.collection(u'sensor_data_mt').document(u'bme')
-gps_file_ref.set({})
-arduino_file_ref.set({})
-polfile_ref.set({})
-image_file_ref.set({})
-bme_file_ref.set({})
+# gps_file_ref.set({})
+# arduino_file_ref.set({})
+# polfile_ref.set({})
+# image_file_ref.set({})
+# bme_file_ref.set({})
 os.system('clear')
 
 
@@ -297,5 +294,5 @@ image_thread.start()
 
 
 
-write_to_firebase(db)
+# write_to_firebase(db)
 # f.close()
