@@ -1,47 +1,47 @@
 import sys
 import os
-from gps import *
+# from gps import *
 import time
-# import threading
+from datetime import datetime
 # import IMU
-import zlib, base64
+import zlib
 import firebase_admin
 from firebase_admin import credentials,firestore
+import multiprocessing as mp
 from picamera import PiCamera
 import urllib2
 # from threading import Thread, Event
-import multiprocessing as mp
 import requests
 import errno
 from socket import error as SocketError
 import difflib
 # import pigpio
 import serial
-
 # rx=26
-
 
 polfile = ''
 arduinofile = ''
 gpsfile = ''
 imagefile = ''
+bmefile = ''
 
 
 
-gpsfile_limit = 3000
-polfile_limit = 3000
-arduinofile_limit = 3000
-imagefile_limit = 500
+gpsfile_limit = 2000
+polfile_limit = 2000
+bmefile_limit = 2000
+arduinofile_limit = 10000
+imagefile_limit = 4
 
 
 
 gpsfile_lines = gpsfile_limit 
 polfile_lines = polfile_limit
+bmefile_lines = bmefile_limit
 arduinofile_lines = arduinofile_limit
 imagefile_lines = imagefile_limit
 
 address_prefix =''          #'/home/pi/Documents/LOG/'
-
 
 
 try:
@@ -62,36 +62,55 @@ except ImportError:
 
 def process_directory(localdir,db):
 	flist = os.listdir(localdir)
+	print ("No of files in {} = {}".format(localdir,len(flist)))
 	if (len(flist)>2):
-		for localfile in flist[1:-1]:		#0th file in .keep , last file is currently in use
+		for localfile in flist[1:-1]:				#0th file in .keep , last file is currently in use
+			# print ("Processing file {}".format(localfile))
 			f = open(localdir+'/'+localfile,'r')
-			lines=f.readlines()
+			# print ("Opened file {}".format(localfile))
+			lines=f.read().split('@')[1:]
+			f.close()
+			# print ( "Read {} lines in {}".format(len(lines),localdir))
 			dic = {}
 			# if (len(lines)>data_lines_uploaded):
 			for line in lines:
 				linelist = line.split(',')
 				ltime = linelist[0]
 				dic[unicode(ltime,'utf-8')] = unicode(linelist[1],'utf-8')
-			doc_ref = db.collection(u'sensor_data_mp').document(localdir)
-			doc_ref.update(dic)        
-			f.close()
-			os.unlink(localdir+'/'+localfile)
+
+			# print ("######################Dictionary made!")
+			# print(str(dic))
+			if (len(dic)>0):
+				doc_ref = db.collection(localdir).document(localfile)
+				doc_ref.set(dic)    
+				print( "#####################Updated {} to firebase".format(localdir))    
+				os.system('cp '+localdir+'/'+localfile+' backup/'+localdir+'/')
+				os.unlink(localdir+'/'+localfile)
+
 def write_to_firebase(db):
 	global address_prefix
 	retry_on = (requests.exceptions.Timeout,requests.exceptions.ConnectionError,requests.exceptions.HTTPError,IOError)
-	time_out=10
+	time_out=1
+	# time_sleep = 100
+	# print ("Started process write to firebase")
 	while True:
-		if(not internet_on()):
+		if (not internet_on()):
 			time.sleep(time_out)
 			continue
 		try:
-			process_directory(u'gps',db)
+			# print("Trying to update to firebase")
+			# process_directory(u'gps',db)
 			process_directory(u'image',db)
 			process_directory(u'poldata',db)
 			process_directory(u'arduino',db)
+			process_directory(u'bme',db)
+			time.sleep(time_out)
 		except IOError ,e :
 			print("Error opening file: {}".format(str(e)))
-		except retry_on:
+			time.sleep(time_out)
+		except Exception, e:
+			print('Error {} : {}'.format(type(e).__name__,e.message))
+			# print(e.message)
 			pass
 		finally:
 			time.sleep(time_out)
@@ -102,65 +121,79 @@ def internet_on():
 	exc = (urllib2.URLError, urllib2.HTTPError)
 	try:
 		urllib2.urlopen('http://216.58.192.142',timeout=3)
+		# print("Internet connection present")
 		return True
-	except exc:			
+	except exc:		
+		# print("Internet connection not present")	
 		return False
-	except socket.timeout:
-		return False
+	# except socket.timeout:
+	# 	# print("Internet connection not present")
+	# 	return False
 	except SocketError as e:
-		if e.errno !=errno.ECONNRESET:
+		# if e.errno !=errno.ECONNRESET:
 		    #print(3)
-		    raise
+		    # raise
 		pass
 
 # thread to take accelerometer readings and writing it in a file and firebase
-writearduino(ser):
+def writearduino(ser):
 	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
 	while True:
 		if ( arduinofile_lines >= arduinofile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 			arduinofile = 'arduino/'+ltime+ 'arduino.txt'
 			arduinofile_lines = 0
 		# string = address_prefix+'accel.txt'
 		#acc='/accel/acc%s'%local
-		fa=open(address_prefix+arduinofile,"a+")
-		#collecting the value of accelerometer every .5 sec So 60 values in 30sec
+		
+		#collecting the value of accelerometer every 16 msec
 		read_serial = ser.readline().strip()
+		# print("Read: {}".format(read_serial))
+		if (len(read_serial)<10):
+			continue
+		if(read_serial[0:3] == 'PMS' ):
+			writepol(read_serial)
+			continue
+		if(read_serial[0:3] == 'BME' ):
+			writebme(read_serial)
+			continue
 		if(read_serial[0] != 'E' ):
 			continue
-		ltime=str(time.asctime(time.localtime(time.time())))
-		s=("%s\t,\t%s\n"%(ltime,read_serial)) 
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		s=("@%s,%s\n"%(ltime,read_serial)) 
+		fa=open(address_prefix+arduinofile,"a+")
 		fa.write(s)
 		fa.close()
 		arduinofile_lines+=1
-		# print ("Wrote the reading {}".format(read_serial))
-		time.sleep(0.5)
-def writegps():
-	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
-	while True:
-		if ( gpsfile_lines >= gpsfile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
-			gpsfile = 'gps/'+ltime+ 'gps.txt'
-			gpsfile_lines = 0
-		localtime = time.asctime(time.localtime(time.time()))
-		print(('latitude    ' , gpsd.fix.latitude))
-		print(('longitude   ' , gpsd.fix.longitude))
-		print(('Time        ' , localtime))
+		print ("Wrote from arduino")
+		time.sleep(0.035)
 
-		data="%s\t,Lat:%f\tLong:%f" %(localtime,gpsd.fix.latitude,gpsd.fix.longitude) 
-		f=open(address_prefix+gpsfile,"a+")
-		f.write("%s\n" %data)  
-		f.close()
-		gpsfile_lines+=1
-		time.sleep(10)  
+# def writegps():
+# 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
+# 	while True:
+# 		if ( gpsfile_lines >= gpsfile_limit):
+# 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+# 			gpsfile = 'gps/'+ltime+ 'gps.txt'
+# 			gpsfile_lines = 0
+# 		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+# 		print(('latitude    ' , gpsd.fix.latitude))
+# 		print(('longitude   ' , gpsd.fix.longitude))
+# 		print(('Time        ' , localtime))
+
+# 		data="%s\t,Lat:%f\tLong:%f" %(localtime,gpsd.fix.latitude,gpsd.fix.longitude) 
+# 		f=open(address_prefix+gpsfile,"a+")
+# 		f.write("%s\n" %data)  
+# 		f.close()
+# 		gpsfile_lines+=1
+# 		time.sleep(10)  
 def writeimage():
 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
 	while True:
 		if ( imagefile_lines >= imagefile_limit):
-			ltime=str(time.asctime(time.localtime(time.time())))
+			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
 			imagefile = 'image/'+ltime+ 'image.txt'
 			imagefile_lines = 0
-		localtime = time.asctime(time.localtime(time.time()))
+		localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 		# print(('Time        ' , localtime))
 		string1 = address_prefix+'image/img.jpg'
 		camera=PiCamera()
@@ -171,145 +204,96 @@ def writeimage():
 		imag=string1
 		#encoding jpeg to text and compressing the text
 		with open(imag,"rb") as imageFile:
-			image_64= base64.b64encode(zlib.compress(bytes(imag,'utf-8'),9))
+			image_64= zlib.compress(imageFile.read()).encode('base64')
 		#delete image file
-		data="%s,ImgAsTxt:%s" %(localtime,image_64) 
+		data="@%s,%s\n" %(localtime,image_64) 
 		f=open(imagefile,"a+")
-		f.write("%s\n" %data)  
+		f.write(data)  
 		f.close()   
 		imagefile_lines+=1
+		print("Wrote an image line!")
 		os.unlink(string1)
-		time.sleep(10)
-# def writepol():
-# 	global address_prefix,dbuffer
-# 	while True:
-# 		if ( polfile_lines >= polfile_limit):
-# 			ltime=str(time.asctime(time.localtime(time.time())))
-# 			polfile = 'pol/'+ltime+ 'pol.txt'
-# 			polfile_lines = 0
-# 		avpg=0
-# 		while avpg==0:
-# 		#time.sleep(1.5)
-# 		(count,data1)=pi.bb_serial_read(rx)
-# 		dbuffer += data1
-# 		#print(dbuffer)
-# 		#print(1)
-# 		while dbuffer and dbuffer[0] != 0x42:
-# 			dbuffer.pop(0)
-# 		#print(2)
-# 		if len(dbuffer) > 200:
-# 			dbuffer = []  # avoid an overrun if all bad data
-# 			continue
-# 		#print(3)
-# 		if len(dbuffer)<33:
-# 			continue
-# 		#print(4)
-# 		if dbuffer[1] != 0x4d:
-# 			dbuffer.pop(0)
-# 			continue
-# 		#print(5)
-# 		frame_len = struct.unpack(">H", bytes(dbuffer[2:4]))[0]
-# 		if frame_len != 28:
-# 			dbuffer = []
-# 			continue
+		time.sleep(2)
+def writepol(pol_data):
+	global address_prefix,polfile,polfile_limit,polfile_lines
+	
+	if ( polfile_lines >= polfile_limit):
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		polfile = 'poldata/'+ltime+ 'pol.txt'
+		polfile_lines = 0
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
-# 		#if len(dbuffer)<33:
-# 		 #   continue
+	data="@%s\t,%s" %(localtime,pol_data) 
+	f=open(address_prefix+polfile,"a+")
+	f.write("%s\n" %data)  
+	f.close()
+	polfile_lines+=1
+	print ("Wrote a poldata line!")
+	return	
+def writebme(bme_data):
+	global address_prefix,bmefile,bmefile_limit,bmefile_lines
+	
+	if ( bmefile_lines >= bmefile_limit):
+		ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
+		bmefile = 'bme/'+ltime+ 'bme.txt'
+		bmefile_lines = 0
+	localtime = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3]
 
-# 		frame = struct.unpack(">HHHHHHHHHHHHHH", bytes(dbuffer[4:32]))
+	data="@%s\t,%s" %(localtime,bme_data) 
+	f=open(address_prefix+bmefile,"a+")
+	f.write("%s\n" %data)  
+	f.close()
+	bmefile_lines+=1
+	print ("Wrote a bmedata line!")
+	return	
+		
 
-# 		pm10_standard, pm25_standard, pm100_standard, pm10_env, \
-# 			pm25_env, pm100_env, particles_03um, particles_05um, particles_10um, \
-# 			particles_25um, particles_50um, particles_100um, skip, checksum = frame
-
-# 		check = sum(dbuffer[0:30])
-
-# 		if check != checksum:
-# 			dbuffer = []
-# 			continue
-
-# 		print("Concentration Units (standard)")
-# 		print("---------------------------------------")
-# 		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %
-# 				(pm10_standard, pm25_standard, pm100_standard))
-# 		print("Concentration Units (environmental)")
-# 		print("---------------------------------------")
-# 		print("PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm10_env, pm25_env, pm100_env))
-# 		print("---------------------------------------")
-# 		print("Particles > 0.3um / 0.1L air:", particles_03um)
-# 		print("Particles > 0.5um / 0.1L air:", particles_05um)
-# 		print("Particles > 1.0um / 0.1L air:", particles_10um)
-# 		print("Particles > 2.5um / 0.1L air:", particles_25um)
-# 		print("Particles > 5.0um / 0.1L air:", particles_50um)
-# 		print("Particles > 10 um / 0.1L air:", particles_100um)
-# 		print("---------------------------------------")
-# 		gf=open(address_prefix+polfile,"a+")
-# 		ltime=time.asctime(time.localtime(time.time()))
-# 		#f.write("Time: %s\tPM 1.0: %d\tPM2.5: %d\tPM10: %d" %str(ltime) %pm10_standard %pm25_standard %pm100_standard)
-# 		s=("PM 1.0: %d\tPM2.5: %d\tPM10: %d" %(pm10_standard, pm25_standard, pm100_standard))
-# 		pol_data=str(ltime)+','+s+'\n'
-# 		gf.write(pol_data)
-# 		gf.close()
-
-# 		#fb1.post('Pol_data',data)
-# 		dbuffer = dbuffer[32:]
-# 		avpg=1
-# 		time.sleep(0.5)
-#Beginning of the program
-# IMU.detectIMU()
-# IMU.initIMU()
-# gpsd = None
-
-logfile=address_prefix+"LOG.txt"
-#Your database name in firebase
-# firebase=firebase.FirebaseApplication('https://sensor-with-avpg.firebaseio.com/', None)
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-gps_file_ref = db.collection(u'sensor_data_mp').document(u'gps')
-arduino_file_ref = db.collection(u'sensor_data_mp').document(u'arduino')
-poldata_file_ref = db.collection(u'sensor_data_mp').document(u'poldata')
-image_file_ref = db.collection(u'sensor_data_mp').document(u'image')
-log_ref.set({})
-arduino_file_ref.set({})
-poldata_file_ref.set({})
-image_file_ref.set({})
+# gps_file_ref = db.collection(u'gps').document(u'gps')
+# arduino_file_ref = db.collection(u'sensor_data_mt').document(u'arduino')
+# polfile_ref = db.collection(u'sensor_data_mt').document(u'poldata')
+# image_file_ref = db.collection(u'sensor_data_mt').document(u'image')
+# bme_file_ref = db.collection(u'sensor_data_mt').document(u'bme')
+# gps_file_ref.set({})
+# arduino_file_ref.set({})
+# polfile_ref.set({})
+# image_file_ref.set({})
+# bme_file_ref.set({})
 os.system('clear')
 
 
-
-
-# class GpsPoller():
+# class GpsPoller(threading.Thread):
 #   def __init__(self):
-#     # threading.Thread.__init__(self)
+#     threading.Thread.__init__(self)
 #     global gpsd
 #     gpsd = gps(mode=WATCH_ENABLE) 
 #     self.current_value = None
 #     self.running = True
-#   def poll_gps(self):
-#   	global gpsd
+ 
+#   def run(self):
+#     global gpsd
 #     while gpsp.running:
 #       next(gpsd) 
-#   def run(self):
-#     p = mp.Process(target=self.poll_gps)
-#     p.start()
 # if __name__ == '__main__':
-
 #   gpsp = GpsPoller() 
-#   gpsp.run()
-  ser = serial.Serial('/dev/ttyUSB0',9600)
+#   gpsp.start()
+# count=0
 
-  accel_p = mp.Process(target=writearduino,args=(ser,))
-  accel_p.start()
+
+ser = serial.Serial('/dev/ttyUSB0',9600)
+accel_p = mp.Process(target=writearduino,args=(ser,))
+accel_p.start()
 #   gps_p = mp.Process(target=writegps)
 #   gps_p.start()
 #   pol_p = mp.Process(target=writepol)
 #   pol_p.start()
-  image_p = mp.Process(target=writeimage)
-  image_p.start()
+image_p = mp.Process(target=writeimage)
+image_p.start()
 
-  write_to_firebase(db)
+# write_to_firebase(db)
 
 # action_thread_1=Thread(target=accel,args=())
 # action_thread_1.start()
