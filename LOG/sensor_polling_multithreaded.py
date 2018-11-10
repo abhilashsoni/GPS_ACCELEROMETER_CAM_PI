@@ -84,8 +84,8 @@ def process_directory(localdir,db):
 				doc_ref = db.collection(localdir).document(localfile)
 				doc_ref.set(dic)    
 				print( "#####################Updated {} to firebase".format(localdir))    
-				os.system('mv '+localdir+'/'+localfile+' backup/'+localdir+'/')
-				# os.unlink(localdir+'/'+localfile)
+				os.system('cp '+localdir+'/'+localfile+' backup/'+localdir+'/')
+				os.unlink(localdir+'/'+localfile)
 
 def write_to_firebase(db):
 	global address_prefix
@@ -148,7 +148,7 @@ def writearduino(ser):
 		
 		#collecting the value of accelerometer every 16 msec
 		read_serial = ser.readline().strip()
-		print("Read: {}".format(read_serial))
+		# print("Read: {}".format(read_serial))
 		if (len(read_serial)<10):
 			continue
 		if(read_serial[0:3] == 'PMS' ):
