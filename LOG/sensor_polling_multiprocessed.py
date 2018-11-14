@@ -138,6 +138,7 @@ def internet_on():
 # thread to take accelerometer readings and writing it in a file and firebase
 def writearduino(ser):
 	global address_prefix,arduinofile,arduinofile_lines,arduinofile_limit
+	tlast = datetime.utcnow()
 	while True:
 		if ( arduinofile_lines >= arduinofile_limit):
 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
@@ -166,7 +167,11 @@ def writearduino(ser):
 		fa.close()
 		arduinofile_lines+=1
 		print ("Wrote from arduino")
-		time.sleep(0.035)
+		tnow = datetime.utcnow()
+		delta = (tnow-tlast).total_seconds()+(tnow-tlast).microseconds/1000000.0
+		if (delta< 0.035):
+			time.sleep(0.035-delta)
+		tlast = datetime.utcnow()
 
 # def writegps():
 # 	global address_prefix,gpsfile,gpsfile_limit,gpsfile_lines
@@ -188,6 +193,7 @@ def writearduino(ser):
 # 		time.sleep(10)  
 def writeimage():
 	global address_prefix,imagefile,imagefile_lines,imagefile_limit
+	tlast = datetime.utcnow()
 	while True:
 		if ( imagefile_lines >= imagefile_limit):
 			ltime=str(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S:%f')[:-3])
@@ -213,7 +219,11 @@ def writeimage():
 		imagefile_lines+=1
 		print("Wrote an image line!")
 		os.unlink(string1)
-		time.sleep(2)
+		tnow = datetime.utcnow()
+		delta = (tnow-tlast).total_seconds()+(tnow-tlast).microseconds/1000000.0
+		if (delta < 2.0):
+			time.sleep(2.0-delta)
+		tlast = datetime.utcnow()
 def writepol(pol_data):
 	global address_prefix,polfile,polfile_limit,polfile_lines
 	
