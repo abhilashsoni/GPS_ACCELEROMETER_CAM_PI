@@ -66,7 +66,7 @@ def process_directory(localdir,db):
 	if (len(flist)>2):
 		for localfile in flist[1:-1]:				#0th file in .keep , last file is currently in use
 			# print ("Processing file {}".format(localfile))
-			if(localfile[-3:] != 'txt')			#to skip the occasional img.jpg  file which can be present in file list
+			if(localfile[-3:] != 'txt'):		#to skip the occasional img.jpg  file which can be present in file list
 				continue
 			f = open(localdir+'/'+localfile,'r')
 			# print ("Opened file {}".format(localfile))
@@ -260,7 +260,7 @@ def writebme(bme_data):
 	return	
 		
 
-cred = credentials.Certificate("serviceAccountKey.json")
+cred = credentials.Certificate("serviceAccountKey2.json")
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
