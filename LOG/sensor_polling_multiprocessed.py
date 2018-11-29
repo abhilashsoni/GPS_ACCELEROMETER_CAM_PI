@@ -27,10 +27,10 @@ bmefile = ''
 
 
 
-gpsfile_limit = 200
-polfile_limit = 200
-bmefile_limit = 200
-arduinofile_limit = 200
+gpsfile_limit = 2000
+polfile_limit = 2000
+bmefile_limit = 2000
+arduinofile_limit = 2000
 imagefile_limit = 4
 
 
