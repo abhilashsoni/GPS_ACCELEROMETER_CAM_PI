@@ -84,7 +84,7 @@ def process_directory(localdir,db):
 				doc_ref = db.collection(localdir).document(localfile)
 				doc_ref.set(dic)    
 				print( "#####################Updated {} to firebase".format(localdir))    
-				os.system('cp '+localdir+'/'+localfile+' backup/'+localdir+'/')
+				#os.system('cp '+localdir+'/'+localfile+' backup/'+localdir+'/')
 				os.unlink(localdir+'/'+localfile)
 
 def write_to_firebase(db):
@@ -303,7 +303,7 @@ accel_p.start()
 image_p = mp.Process(target=writeimage)
 image_p.start()
 
-# write_to_firebase(db)
+write_to_firebase(db)
 
 # action_thread_1=Thread(target=accel,args=())
 # action_thread_1.start()
