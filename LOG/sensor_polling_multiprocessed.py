@@ -27,10 +27,10 @@ bmefile = ''
 
 
 
-gpsfile_limit = 2000
-polfile_limit = 2000
-bmefile_limit = 2000
-arduinofile_limit = 10000
+gpsfile_limit = 200
+polfile_limit = 200
+bmefile_limit = 200
+arduinofile_limit = 200
 imagefile_limit = 4
 
 
@@ -66,6 +66,8 @@ def process_directory(localdir,db):
 	if (len(flist)>2):
 		for localfile in flist[1:-1]:				#0th file in .keep , last file is currently in use
 			# print ("Processing file {}".format(localfile))
+			if(localfile[-3:] != 'txt')			#to skip the occasional img.jpg  file which can be present in file list
+				continue
 			f = open(localdir+'/'+localfile,'r')
 			# print ("Opened file {}".format(localfile))
 			lines=f.read().split('@')[1:]
